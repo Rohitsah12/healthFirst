@@ -6,6 +6,7 @@ import { UserRole } from "@prisma/client";
 import { ApiError } from "../utils/ApiError.js";
 import prisma from "../config/prisma.config.js";
 import { hashPassword } from "../utils/hashingPassword.js";
+import id from "zod/v4/locales/id.js";
 
 
 export const addStaff = asyncHandler(async (req: Request, res: Response) => {
@@ -49,11 +50,11 @@ export const getAllStaff = asyncHandler(async (req: Request, res: Response) => {
 
 
 export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
-    const { staffId: id } = staffIdParamSchema.parse(req.params);
+    const { staffId } = staffIdParamSchema.parse(req.params);
     const { name, email, password , phone } = staffUpdateSchema.parse(req.body);
 
     const staff = await prisma?.user.findUnique({
-        where: { id }
+        where: { id: staffId }
     });
     if (!staff || staff.role !== UserRole.STAFF) {
         throw new ApiError("Staff not found", 404);
@@ -64,11 +65,11 @@ export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
     const emailExists = await prisma?.user.findUnique({
         where: { email: email!.toLowerCase() }
     });
-    if (emailExists && emailExists.id !== id) {
+    if (emailExists && emailExists.id !== staffId) {
         throw new ApiError("Email already in use by another user", 400);
     }
     const updatedStaff = await prisma?.user.update({
-        where: { id },
+        where: { id: staffId },
         data: {
             name: capitalizedName!,
             email: email!.toLowerCase(),
@@ -83,17 +84,17 @@ export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const deleteStaff = asyncHandler(async (req: Request, res: Response) => {
-    const { staffId: id } = staffIdParamSchema.parse(req.params);
+    const { staffId  } = staffIdParamSchema.parse(req.params);
 
     const staff = await prisma?.user.findUnique({
-        where: { id }
+        where: { id: staffId }
     });
     if (!staff || staff.role !== UserRole.STAFF) {
         throw new ApiError("Staff not found", 404);
     }
 
     await prisma?.user.delete({
-        where: { id }
+        where: { id: staffId }
     });
 
     return res.status(204).json(new ApiResponse("Staff deleted successfully", null));

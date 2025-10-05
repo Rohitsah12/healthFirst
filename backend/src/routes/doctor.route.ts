@@ -8,8 +8,8 @@ import { addDoctor, deleteDoctor, getDoctors, updateDoctor } from "../controller
 router.use(authenticateJWT,authorizeRoles("ADMIN","STAFF"));
 router.post("/",addDoctor);
 router.get("/",getDoctors);
-router.patch("/:id",updateDoctor);
-router.delete("/:id",deleteDoctor);
+router.patch("/:doctorId",updateDoctor);
+router.delete("/:doctorId",deleteDoctor);
 
 
 export default router;  

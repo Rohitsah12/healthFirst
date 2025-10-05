@@ -8,7 +8,7 @@ const router = Router();
 router.use(authenticateJWT, authorizeRoles("ADMIN"));
 router.post("/", addStaff);
 router.get("/", getAllStaff);
-router.patch("/:id", updateStaff);
-router.delete("/:id", deleteStaff);
+router.patch("/:staffId", updateStaff);
+router.delete("/:staffId", deleteStaff);
 
 export default router;
