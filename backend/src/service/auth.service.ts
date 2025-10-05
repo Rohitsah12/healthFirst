@@ -1,6 +1,6 @@
 import { ApiError } from "../utils/ApiError.js";
 import bcrypt from "bcryptjs"
-import { generateTokens } from "../utils/auth.utils.js";
+import { generateTokens } from "../utils/auth.js";
 import  prisma  from "../config/prisma.config.js";
 
 import type { LoginDataInput } from "../types/auth.types.js";

@@ -24,7 +24,7 @@ export const authenticateJWT = asyncHandler(async (req: any, _, next: NextFuncti
     }
 
     req.user = user;
-    next();
+    return next();
 });
 
 export const authorizeRoles = (...roles: UserRole[]) => {
