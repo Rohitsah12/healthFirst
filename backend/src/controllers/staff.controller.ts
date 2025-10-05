@@ -9,7 +9,7 @@ import { hashPassword } from "../utils/hashingPassword.js";
 
 
 export const addStaff = asyncHandler(async (req: Request, res: Response) => {
-    const { name, email, password } = staffCreateSchema.parse(req.body);
+    const { name, email, password, phone } = staffCreateSchema.parse(req.body);
 
     
     const capitalizedName = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
@@ -28,7 +28,8 @@ export const addStaff = asyncHandler(async (req: Request, res: Response) => {
             name: capitalizedName,
             email: emailLowerCase,
             password: hashedPassword,
-            role: UserRole.STAFF
+            role: UserRole.STAFF,
+            phone
         }
     });
 
@@ -49,7 +50,7 @@ export const getAllStaff = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
     const { staffId: id } = staffIdParamSchema.parse(req.params);
-    const { name, email, password } = staffUpdateSchema.parse(req.body);
+    const { name, email, password , phone } = staffUpdateSchema.parse(req.body);
 
     const staff = await prisma?.user.findUnique({
         where: { id }
@@ -71,7 +72,8 @@ export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
         data: {
             name: capitalizedName!,
             email: email!.toLowerCase(),
-            password:hashedPassword! 
+            password:hashedPassword! ,
+            phone: phone!
         }
     });
 

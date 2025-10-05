@@ -4,8 +4,9 @@ import  asyncHandler  from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import  prisma  from '../config/prisma.config.js';
 import { UserRole } from '@prisma/client';
+import { config } from '../config/index.js';
 
-const jwtAccessSecret = process.env.JWT_ACCESS_SECRET;
+const jwtAccessSecret = config.jwtAccessSecret;
 
 export const authenticateJWT = asyncHandler(async (req: any, _, next: NextFunction) => {
     const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");

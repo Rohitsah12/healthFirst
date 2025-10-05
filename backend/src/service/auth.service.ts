@@ -6,8 +6,9 @@ import  prisma  from "../config/prisma.config.js";
 import type { LoginDataInput } from "../types/auth.types.js";
 
 export const loginService = async ({ email, password }: LoginDataInput) => {
+
     const user = await prisma?.user.findFirst({
-        where: { email }
+        where: { email: email.toLowerCase() },
     });
 
     if (!user) throw new ApiError("User does not exist", 404);
