@@ -1,5 +1,3 @@
-
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,4 +5,133 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  DOCTOR
+  STAFF
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum VisitType {
+  SCHEDULED
+  WALK_IN
+}
+
+enum VisitStatus {
+  // Pre-visit states
+  SCHEDULED
+  CANCELLED
+  // Active visit states (The "Queue")
+  CHECKED_IN
+  WITH_DOCTOR
+  // Post-visit states
+  COMPLETED
+}
+
+enum PriorityLevel {
+  NORMAL
+  URGENT
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctorProfile Doctor?
+}
+
+model Doctor {
+  id             String @id @default(uuid())
+  userId         String @unique // Foreign key to the User model
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialisation String
+  gender         Gender
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  // Relations
+  workingHours DoctorSchedule[]
+  visits       Visit[]
+}
+
+model Patient {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique
+  gender    Gender
+  dob       DateTime @db.Date
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  visits Visit[]
+}
+
+model Visit {
+  id            String      @id @default(uuid())
+  patientId     String
+  doctorId      String
+  visitType     VisitType
+  priority      PriorityLevel @default(NORMAL)
+  scheduledTime DateTime?
+  currentStatus VisitStatus
+  createdAt     DateTime    @default(now())
+
+  // Relations
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  logs    VisitLog[]
+
+  @@index([patientId, doctorId])
+  @@index([currentStatus])
+}
+
+
+model VisitLog {
+  id        String      @id @default(uuid())
+  visitId   String
+  status    VisitStatus 
+  timestamp DateTime    @default(now())
+  notes     String?    
+  // Relations
+  visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([visitId])
+}
+
+model DoctorSchedule {
+  id        String    @id @default(uuid())
+  doctorId  String
+  dayOfWeek DayOfWeek
+  startTime DateTime  @db.Time 
+  endTime   DateTime  @db.Time 
+  createdAt DateTime  @default(now())
+
+  // Relations
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek, startTime])
 }
