@@ -13,5 +13,8 @@ export const config = {
   
     // jwt secret
     jwtAccessSecret: process.env.JWT_ACCESS_SECRET || "SecretKey",
-    jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "SecretKeyx"
+    jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "SecretKey",
+
+    jwtAccessExpiration: process.env.JWT_ACCESS_EXPIRATION ,
+    jwtRefreshExpiration: process.env.JWT_REFRESH_EXPIRATION ,
 }
