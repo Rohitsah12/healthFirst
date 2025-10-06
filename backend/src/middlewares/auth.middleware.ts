@@ -17,7 +17,7 @@ export const authenticateJWT = asyncHandler(async (req: any, _, next: NextFuncti
     const decodedToken: any = jwt.verify(token, jwtAccessSecret!);
     const user = await prisma.user.findUnique({
       where: { id: decodedToken?.id },
-      select: { id: true, email: true, role: true }
+      select: { id: true, email: true, role: true, name: true }
     });
 
     if (!user) {
