@@ -61,3 +61,28 @@ export const getMe = asyncHandler(async (req: any, res: Response) => {
         )
     );
 })
+
+export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
+    const token = req.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "");
+
+    if (!token) {
+        return res.status(401).json(new ApiResponse("Unauthorized request", null, false));
+    }
+
+    const { accessToken, role } = await authService.refreshAccessToken(token);
+
+    res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.nodeEnv === "production",
+        sameSite: "strict",
+        maxAge: config.jwtAccessExpiration ? parseInt(config.jwtAccessExpiration) * 1000 : 15 * 60 * 1000
+    });
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Access token refreshed successfully",
+            { role },
+            true
+        )
+    );
+});

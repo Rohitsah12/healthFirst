@@ -1,9 +1,12 @@
 import { ApiError } from "../utils/ApiError.js";
 import bcrypt from "bcryptjs"
-import { generateTokens } from "../utils/auth.js";
+import jwt from "jsonwebtoken";
+import type { JwtPayload } from "jsonwebtoken";
+import { generateAccessToken, generateTokens } from "../utils/auth.js";
 import  prisma  from "../config/prisma.config.js";
 
 import type { LoginDataInput } from "../types/auth.types.js";
+import { config } from "../config/index.js";
 
 export const login = async ({ email, password }: LoginDataInput) => {
 
@@ -19,3 +22,31 @@ export const login = async ({ email, password }: LoginDataInput) => {
     const tokens = await generateTokens(user.id, user.role)
     return { ...tokens, role: user.role }
 }
+
+export const refreshAccessToken = async (refreshToken: string) => {
+    try {
+        const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret as string) as JwtPayload;
+
+        if (!decoded.id || !decoded.role) {
+            throw new ApiError("Invalid token", 401);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id }
+        });
+
+        if (!user) {
+            throw new ApiError("User not found", 401);
+        }
+
+        const accessToken = generateAccessToken(user.id, user.role);
+
+        return { accessToken, role: user.role };
+
+    } catch (error) {
+        if (error instanceof jwt.JsonWebTokenError) {
+            throw new ApiError("Invalid or expired token", 401);
+        }
+        throw error;
+    }
+};
