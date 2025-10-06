@@ -6,3 +6,5 @@ export const paginationSchema = z.object({
   search: z.string().optional(), // Optional search term
   isActive: z.enum(['true', 'false', 'all']).default('all'),
 });
+
+export type PaginationInput = z.infer<typeof paginationSchema>;

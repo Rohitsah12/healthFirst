@@ -28,3 +28,4 @@ export type UpdateDoctorInput = z.infer<typeof updateDoctorSchema>;
 export const doctorIdParamSchema = z.object({
   doctorId: z.string().uuid("Invalid doctor ID"),
 }); 
+

@@ -2,100 +2,43 @@ import type { Request, Response } from "express";
 import asyncHandler from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { staffCreateSchema, staffIdParamSchema, staffUpdateSchema } from "../types/staff.types.js";
-import { UserRole } from "@prisma/client";
-import { ApiError } from "../utils/ApiError.js";
-import prisma from "../config/prisma.config.js";
-import { hashPassword } from "../utils/hashingPassword.js";
-import id from "zod/v4/locales/id.js";
-
+import * as staffService from "../service/staff.service.js";
 
 export const addStaff = asyncHandler(async (req: Request, res: Response) => {
-    const { name, email, password, phone } = staffCreateSchema.parse(req.body);
+  const validatedData = staffCreateSchema.parse(req.body);
 
-    
-    const capitalizedName = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-    const emailLowerCase = email.toLowerCase();
-    const existingUser = await prisma?.user.findUnique({
-        where: { email: emailLowerCase },
-    });
+  const newStaff = await staffService.createStaff(validatedData);
 
-    if (existingUser) {
-        throw new ApiError("User with this email already exists", 400);
-    }
-
-    const hashedPassword = await hashPassword(password);
-    const newStaff = await prisma?.user.create({
-        data: {
-            name: capitalizedName,
-            email: emailLowerCase,
-            password: hashedPassword,
-            role: UserRole.STAFF,
-            phone
-        }
-    });
-
-    const { password: _, ...sanitizedNewStaff } = newStaff;
-
-    return res.status(201).json(new ApiResponse("Staff created successfully", sanitizedNewStaff));
+  return res
+    .status(201)
+    .json(new ApiResponse("Staff created successfully", newStaff));
 });
 
 export const getAllStaff = asyncHandler(async (req: Request, res: Response) => {
-    const staffList = await prisma?.user.findMany({
-        where: { role: UserRole.STAFF },
-        select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true }
-    });
+  const staffList = await staffService.getAllStaff();
 
-    return res.status(200).json(new ApiResponse("Staff retrieved successfully", staffList));
+  return res
+    .status(200)
+    .json(new ApiResponse("Staff retrieved successfully", staffList));
 });
 
-
 export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
-    const { staffId } = staffIdParamSchema.parse(req.params);
-    const { name, email, password , phone } = staffUpdateSchema.parse(req.body);
+  const { staffId } = staffIdParamSchema.parse(req.params);
+  const updateData = staffUpdateSchema.parse(req.body);
 
-    const staff = await prisma?.user.findUnique({
-        where: { id: staffId }
-    });
-    if (!staff || staff.role !== UserRole.STAFF) {
-        throw new ApiError("Staff not found", 404);
-    }
-    const capitalizedName = name!.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-    const hashedPassword = password ? await hashPassword(password) : undefined;
+  const updatedStaff = await staffService.updateStaff(staffId, updateData);
 
-    const emailExists = await prisma?.user.findUnique({
-        where: { email: email!.toLowerCase() }
-    });
-    if (emailExists && emailExists.id !== staffId) {
-        throw new ApiError("Email already in use by another user", 400);
-    }
-    const updatedStaff = await prisma?.user.update({
-        where: { id: staffId },
-        data: {
-            name: capitalizedName!,
-            email: email!.toLowerCase(),
-            password:hashedPassword! ,
-            phone: phone!
-        }
-    });
-
-    const { password: _, ...sanitizedUpdatedStaff } = updatedStaff;
-
-    return res.status(200).json(new ApiResponse("Staff updated successfully", sanitizedUpdatedStaff));
+  return res
+    .status(200)
+    .json(new ApiResponse("Staff updated successfully", updatedStaff));
 });
 
 export const deleteStaff = asyncHandler(async (req: Request, res: Response) => {
-    const { staffId  } = staffIdParamSchema.parse(req.params);
+  const { staffId } = staffIdParamSchema.parse(req.params);
 
-    const staff = await prisma?.user.findUnique({
-        where: { id: staffId }
-    });
-    if (!staff || staff.role !== UserRole.STAFF) {
-        throw new ApiError("Staff not found", 404);
-    }
+  await staffService.deleteStaff(staffId);
 
-    await prisma?.user.delete({
-        where: { id: staffId }
-    });
-
-    return res.status(204).json(new ApiResponse("Staff deleted successfully", null));
+  return res
+    .status(204)
+    .json(new ApiResponse("Staff deleted successfully", null));
 });

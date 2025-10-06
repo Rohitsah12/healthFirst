@@ -2,14 +2,14 @@ import type { Request, Response } from "express";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { loginDataSchema } from "../types/auth.types.js";
-import { loginService } from "../service/auth.service.js";
+import * as authService from "../service/auth.service.js";
 import { config } from "../config/index.js"
 
 
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = loginDataSchema.parse(req.body);
-    const { accessToken, refreshToken, role } = await loginService({ email, password });
+    const { accessToken, refreshToken, role } = await authService.login({ email, password });
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: config.nodeEnv === "production",

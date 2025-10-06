@@ -5,7 +5,7 @@ import  prisma  from "../config/prisma.config.js";
 
 import type { LoginDataInput } from "../types/auth.types.js";
 
-export const loginService = async ({ email, password }: LoginDataInput) => {
+export const login = async ({ email, password }: LoginDataInput) => {
 
     const user = await prisma?.user.findFirst({
         where: { email: email.toLowerCase() },
