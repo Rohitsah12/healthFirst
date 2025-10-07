@@ -3,7 +3,7 @@ import { StoreProvider } from './StoreProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Secure Clinic App',
+  title: 'HealthFirst',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

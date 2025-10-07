@@ -87,6 +87,11 @@ export const getDoctors = async (params: PaginationInput) => {
             createdAt: true,
           },
         },
+        workingHours: {
+          orderBy: {
+            dayOfWeek: 'asc'
+          }
+        },
         _count: {
           select: {
             visits: true,
@@ -117,6 +122,39 @@ export const getDoctors = async (params: PaginationInput) => {
       hasPrevPage,
     },
   };
+};
+
+export const getDoctorById = async (doctorId: string) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: doctorId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      },
+      workingHours: {
+        orderBy: {
+          dayOfWeek: 'asc'
+        }
+      },
+      _count: {
+        select: {
+          visits: true,
+        },
+      },
+    },
+  });
+
+  if (!doctor) {
+    throw new ApiError("Doctor not found", 404);
+  }
+
+  return doctor;
 };
 
 export const updateDoctor = async (doctorId: string, updateData: UpdateDoctorInput) => {
@@ -201,6 +239,11 @@ export const updateDoctor = async (doctorId: string, updateData: UpdateDoctorInp
             updatedAt: true,
           },
         },
+        workingHours: {
+          orderBy: {
+            dayOfWeek: 'asc'
+          }
+        },
         _count: {
           select: { visits: true },
         },
@@ -270,4 +313,3 @@ export const deleteDoctor = async (doctorId: string, isPermanent: boolean) => {
     return deactivatedDoctor;
   }
 };
-

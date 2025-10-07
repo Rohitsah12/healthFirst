@@ -1,8 +1,8 @@
-'use client';
-import { Provider } from 'react-redux';
-import { store } from './store/store';
-import { useEffect } from 'react';
-import { checkAuthStatus } from './store/authSlice';
+"use client";
+import { Provider } from "react-redux";
+import { store } from "./store/store";
+import { useEffect } from "react";
+import { checkAuthStatus } from "./store/authSlice";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {

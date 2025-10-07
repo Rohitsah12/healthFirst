@@ -25,6 +25,16 @@ export const getDoctors = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
+export const getDoctorById = asyncHandler(async (req: Request, res: Response) => {
+  const { doctorId } = doctorIdParamSchema.parse(req.params);
+
+  const doctor = await doctorService.getDoctorById(doctorId);
+
+  return res.status(200).json(
+    new ApiResponse("Doctor fetched successfully", doctor, true)
+  );
+});
+
 export const updateDoctor = asyncHandler(async (req: Request, res: Response) => {
   const { doctorId } = doctorIdParamSchema.parse(req.params);
   const updateData = updateDoctorSchema.parse(req.body);
