@@ -4,6 +4,8 @@ import { createDoctorSchema, doctorIdParamSchema, updateDoctorSchema } from "../
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { paginationSchema } from "../types/pagination.types.js";
 import * as doctorService from "../service/doctor.service.js";
+import { ApiError } from "../utils/ApiError.js";
+import { DayOfWeek } from "@prisma/client";
 
 export const addDoctor = asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createDoctorSchema.parse(req.body);
@@ -57,4 +59,20 @@ export const deleteDoctor = asyncHandler(async (req: Request, res: Response) => 
     : "Doctor deactivated successfully";
 
   return res.status(200).json(new ApiResponse(message, result, true));
+});
+
+export const getAvailableDoctorsByDay = asyncHandler(async (req: Request, res: Response) => {
+  const dayQuery = req.query.day as string;
+
+  if (!dayQuery || !(dayQuery.toUpperCase() in DayOfWeek)) {
+    throw new ApiError("A valid day of the week (e.g., 'MONDAY') is required.", 400);
+  }
+  
+  const dayOfWeek = dayQuery.toUpperCase() as DayOfWeek;
+
+  const doctors = await doctorService.getDoctorsByDay(dayOfWeek);
+
+  return res.status(200).json(
+    new ApiResponse("Available doctors fetched successfully", doctors, true)
+  );
 });

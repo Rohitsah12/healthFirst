@@ -1,4 +1,5 @@
 import api from '../lib/axiosClient';
+import { ApiResponse } from '../store/types';
 import type { DoctorsResponse, Doctor, CreateDoctorInput } from '../types/doctor.types';
 
 export const doctorApi = {
@@ -37,5 +38,11 @@ export const doctorApi = {
   deleteDoctor: async (doctorId: string, permanent: boolean = false) => {
     const response = await api.delete(`/doctor/${doctorId}?permanent=${permanent}`);
     return response.data;
-  }
+  },
+
+};
+
+export const getAvailableDoctors = async (dayOfWeek: string): Promise<Doctor[]> => {
+  const response = await api.get<ApiResponse<Doctor[]>>(`/doctor/available-by-day?day=${dayOfWeek}`);
+  return response.data.data;
 };

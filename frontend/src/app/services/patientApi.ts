@@ -32,4 +32,7 @@ export const patientApi = {
     const response = await api.delete(`/patient/${id}`);
     return response.data;
   },
+
+  
 };
+

@@ -1,25 +1,63 @@
 "use client";
 
-import { RootState, useAppSelector } from "@/app/store/store";
+import { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "../../store/store";
+import { fetchQueueThunk } from "../../store/queueSlice";
+import { QueueColumn } from "../../components/queue/QueueColumn";
+import { openModal } from "@/app/store/uiSlice";
 import { UserPlus } from "lucide-react";
 
+export default function QueuePage() {
+  const dispatch = useAppDispatch();
+  const { waiting, withDoctor, status, movingVisitId } = useAppSelector(
+    (state) => state.queue
+  );
 
-const QueuePage = () => {
+  useEffect(() => {
+    dispatch(fetchQueueThunk());
+
+    const interval = setInterval(() => {
+      dispatch(fetchQueueThunk());
+    }, 30000); 
+
+    return () => clearInterval(interval);
+  }, [dispatch]);
+
   return (
-    <div className=" text-black">
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Live Queue</h1>
-          <p className="text-gray-600">Real-time patient flow managemen</p>
+          <h1 className="text-3xl font-bold text-gray-800">Live Queue</h1>
+          <p className="text-gray-600 mt-1">
+            Real-time patient flow management
+          </p>
         </div>
-        <div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded flex items-center">
-            <UserPlus size={16} className="m-1" /> Add Walk in Patient
-          </button>
-        </div>
+        <button
+          onClick={() => dispatch(openModal("addWalkin"))}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+        >
+          <UserPlus size={20} /> Add Walk-in Patient
+        </button>
       </div>
+
+      {status === "loading" && !waiting.length && !withDoctor.length ? (
+        <p>Loading queue...</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <QueueColumn
+            title="Waiting"
+            visits={waiting}
+            color="blue"
+            movingVisitId={movingVisitId}
+          />
+          <QueueColumn
+            title="With Doctor"
+            visits={withDoctor}
+            color="yellow"
+            movingVisitId={movingVisitId}
+          />
+        </div>
+      )}
     </div>
   );
-};
-
-export default QueuePage;
+}

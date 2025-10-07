@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { DayOfWeek, UserRole } from "@prisma/client";
 import prisma from "../config/prisma.config.js";
 import { ApiError } from "../utils/ApiError.js";
 import { hashPassword } from "../utils/hashingPassword.js";
@@ -312,4 +312,38 @@ export const deleteDoctor = async (doctorId: string, isPermanent: boolean) => {
 
     return deactivatedDoctor;
   }
+};
+
+
+export const getDoctorsByDay = async (dayOfWeek: DayOfWeek) => {
+  const doctors = await prisma.doctor.findMany({
+    where: {
+      isActive: true, // Only find active doctors
+      workingHours: {
+        some: {
+          dayOfWeek: dayOfWeek,
+        },
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      workingHours: {
+        where: {
+          dayOfWeek: dayOfWeek, // Optionally, only return the relevant schedule
+        },
+      },
+    },
+    orderBy: {
+      user: {
+        name: 'asc',
+      },
+    },
+  });
+
+  return doctors;
 };

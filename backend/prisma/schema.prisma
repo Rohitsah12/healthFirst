@@ -102,6 +102,10 @@ model Visit {
   currentStatus VisitStatus
   createdAt     DateTime    @default(now())
 
+  checkInTime    DateTime? // The time the patient was checked in
+  withDoctorTime DateTime? // The time the consultation started
+  completeTime   DateTime? // The time the visit was completed
+
   // Relations
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Restrict)

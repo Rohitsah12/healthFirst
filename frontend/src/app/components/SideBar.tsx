@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { logoutUser } from '../store/authSlice';
+
 const NavItem = ({ href, icon: Icon, label, badge }: { href: string; icon: LucideIcon; label: string; badge?: number }) => {
     const pathname = usePathname();
     const isActive = pathname === href;
@@ -49,7 +50,9 @@ const LogoutButton = () => {
 
 export const Sidebar = () => {
     const { user, role } = useAppSelector((state) => state.auth);
-    const waitingCount = 5;
+    
+ 
+    const waitingCount = useAppSelector((state) => state.queue.waiting.length);
 
     return (
         <div className="w-64 bg-gradient-to-b from-blue-900 to-blue-800 text-white h-screen fixed left-0 top-0 flex flex-col shadow-2xl">

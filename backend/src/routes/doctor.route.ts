@@ -8,15 +8,18 @@ import {
   deleteDoctor, 
   getDoctors, 
   getDoctorById,
-  updateDoctor 
+  updateDoctor, 
+  getAvailableDoctorsByDay
 } from "../controllers/doctor.controller.js";
 
 router.use(authenticateJWT, authorizeRoles("ADMIN", "STAFF"));
 
 router.post("/", addDoctor);
 router.get("/", getDoctors);
+router.get("/available-by-day", getAvailableDoctorsByDay);
 router.get("/:doctorId", getDoctorById);
 router.patch("/:doctorId", updateDoctor);
 router.delete("/:doctorId", deleteDoctor);
+
 
 export default router;
