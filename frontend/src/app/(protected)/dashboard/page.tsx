@@ -8,6 +8,7 @@ import useSWR from 'swr';
 import  api  from '../../lib/axiosClient'; // Ensure this path is correct for your project
 import { Calendar, CheckCircle, Clock, Stethoscope, UserPlus, ChevronRight } from 'lucide-react';
 import { StatCard } from '@/app/components/StatCard'; // Ensure you have this component
+import LoadingSpinner from '@/app/components/shared/LoadingSpinner';
 
 // Define the type for your API data to ensure TypeScript knows its shape.
 interface DashboardData {
@@ -49,7 +50,7 @@ export default function DashboardPage() {
     });
 
     // Handle the loading state while data is being fetched.
-    if (isLoading) return <p className="text-center p-8">Loading Dashboard...</p>;
+    if (isLoading) return <LoadingSpinner />;
 
     // Handle any errors that occur during fetching.
     if (error) return <p className="text-center p-8 text-red-600">Failed to load dashboard data.</p>;
