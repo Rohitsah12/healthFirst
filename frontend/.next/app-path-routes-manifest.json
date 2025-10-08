@@ -1,0 +1,12 @@
+{
+  "/(auth)/login/page": "/login",
+  "/(protected)/appointments/page": "/appointments",
+  "/(protected)/dashboard/page": "/dashboard",
+  "/(protected)/doctors/page": "/doctors",
+  "/(protected)/history/page": "/history",
+  "/(protected)/patients/page": "/patients",
+  "/(protected)/queue/page": "/queue",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/"
+}
