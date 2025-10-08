@@ -35,7 +35,7 @@ const CancelModal: React.FC<CancelModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-200">
@@ -98,19 +98,7 @@ const CancelModal: React.FC<CancelModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Reason Input */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Cancellation Reason (Optional)
-                        </label>
-                        <textarea
-                            rows={3}
-                            placeholder="e.g., Patient requested cancellation, Schedule conflict..."
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:outline-none"
-                        ></textarea>
-                    </div>
+                
                 </div>
 
                 {/* Footer */}

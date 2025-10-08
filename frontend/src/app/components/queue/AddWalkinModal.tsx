@@ -134,7 +134,7 @@ export const AddWalkinModal = () => {
                 {error && <p className="text-red-500 text-sm">{error}</p>}
                 </div>
                 <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-                <button onClick={() => dispatch(closeModal())} className="px-6 py-3 border-2 rounded-lg font-medium">Cancel</button>
+                <button onClick={() => dispatch(closeModal())} className="px-6 py-3 border-2 rounded-lg font-medium text-gray-800">Cancel</button>
                 <button onClick={handleCheckIn} disabled={isLoading} className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2">
                     {isLoading ? 'Checking in...' : <><Check size={20} /> Check-in Patient</>}
                 </button>
