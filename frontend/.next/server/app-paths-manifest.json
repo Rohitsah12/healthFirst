@@ -1,12 +1,5 @@
 {
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(protected)/appointments/page": "app/(protected)/appointments/page.js",
-  "/(protected)/dashboard/page": "app/(protected)/dashboard/page.js",
-  "/(protected)/doctors/page": "app/(protected)/doctors/page.js",
-  "/(protected)/history/page": "app/(protected)/history/page.js",
-  "/(protected)/patients/page": "app/(protected)/patients/page.js",
-  "/(protected)/queue/page": "app/(protected)/queue/page.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/page": "app/page.js"
+  "/favicon.ico/route": "app/favicon.ico/route.js"
 }
