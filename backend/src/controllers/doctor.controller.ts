@@ -76,3 +76,45 @@ export const getAvailableDoctorsByDay = asyncHandler(async (req: Request, res: R
     new ApiResponse("Available doctors fetched successfully", doctors, true)
   );
 });
+
+
+export const getDoctorAvailability = asyncHandler(async (req: Request, res: Response) => {
+    const { doctorId } = req.params;
+    const { date } = req.query;
+
+    if (!date || typeof date !== "string") {
+        return res.status(400).json(
+            new ApiResponse("Date parameter is required", null, false)
+        );
+    }
+
+    const availability = await doctorService.getDoctorAvailability(doctorId!, date);
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Doctor availability retrieved successfully",
+            availability,
+            true
+        )
+    );
+});
+
+export const getDoctorsAvailableOnDate = asyncHandler(async (req: Request, res: Response) => {
+    const { date } = req.query;
+
+    if (!date || typeof date !== "string") {
+        return res.status(400).json(
+            new ApiResponse("Date parameter is required", null, false)
+        );
+    }
+
+    const doctors = await doctorService.getDoctorsAvailableOnDate(date);
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Available doctors retrieved successfully",
+            { doctors },
+            true
+        )
+    );
+});

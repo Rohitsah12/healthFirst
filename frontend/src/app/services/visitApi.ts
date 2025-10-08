@@ -38,3 +38,4 @@ export const exportVisitHistory = async (params: VisitHistoryQuery): Promise<Blo
     });
     return response.data as Blob;
 };
+

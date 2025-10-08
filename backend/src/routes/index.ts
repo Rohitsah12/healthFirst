@@ -6,6 +6,7 @@ import doctorScheduleRouter from "./doctorSchedule.route.js";
 import patientRouter from "./patient.route.js";
 import queueRouter from "./queue.route.js";
 import visitsRouter from "./visit.route.js";
+import dashboardRouter from "./dashboard.route.js";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use("/doctor-schedule",doctorScheduleRouter)
 router.use("/patient",patientRouter);
 router.use("/queue",queueRouter);
 router.use("/visits",visitsRouter);
+router.use("/dashboard",dashboardRouter);
 
 
 export default router;

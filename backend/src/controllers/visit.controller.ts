@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import ExcelJS from "exceljs";
 import asyncHandler from "../utils/asyncHandler.js";
-import { createVisitSchema, visitHistoryQuerySchema } from "../types/visit.types.js";
+import { bookAppointmentSchema, createVisitSchema, rescheduleAppointmentSchema, visitHistoryQuerySchema } from "../types/visit.types.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import * as visitService from "../service/visit.service.js";
 
@@ -149,6 +149,93 @@ export const getDoctorVisitHistory = asyncHandler(async (req: Request, res: Resp
         new ApiResponse(
             "Doctor visit history retrieved successfully",
             { visits },
+            true
+        )
+    );
+});
+
+
+export const getAppointmentsByDate = asyncHandler(async (req: Request, res: Response) => {
+    const { date } = req.query;
+
+    if (!date || typeof date !== "string") {
+        return res.status(400).json(
+            new ApiResponse("Date parameter is required", null, false)
+        );
+    }
+
+    const appointments = await visitService.getAppointmentsByDate(date);
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Appointments retrieved successfully",
+            { appointments },
+            true
+        )
+    );
+});
+
+
+export const bookAppointment = asyncHandler(async (req: Request, res: Response) => {
+    const validatedData = bookAppointmentSchema.parse(req.body);
+
+    const { notes, ...appointmentData } = validatedData;
+    const cleanedData = notes !== undefined ? { ...appointmentData, notes } : appointmentData;
+
+    const appointment = await visitService.bookAppointment(cleanedData);
+
+    return res.status(201).json(
+        new ApiResponse(
+            "Appointment booked successfully",
+            { appointment },
+            true
+        )
+    );
+});
+
+
+export const rescheduleAppointment = asyncHandler(async (req: Request, res: Response) => {
+    const { visitId } = req.params;
+    const validatedData = rescheduleAppointmentSchema.parse(req.body);
+
+    const appointment = await visitService.rescheduleAppointment(
+        visitId!,
+        validatedData.newScheduledTime
+    );
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Appointment rescheduled successfully",
+            { appointment },
+            true
+        )
+    );
+});
+
+export const cancelAppointment = asyncHandler(async (req: Request, res: Response) => {
+    const { visitId } = req.params;
+    const { reason } = req.body;
+
+    const appointment = await visitService.cancelAppointment(visitId!, reason);
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Appointment cancelled successfully",
+            { appointment },
+            true
+        )
+    );
+});
+
+export const checkInAppointment = asyncHandler(async (req: Request, res: Response) => {
+    const { visitId } = req.params;
+
+    const appointment = await visitService.checkInAppointment(visitId!)!;
+
+    return res.status(200).json(
+        new ApiResponse(
+            "Patient checked in successfully",
+            { appointment },
             true
         )
     );

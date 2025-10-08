@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.config.js";
 import type { CreateVisitInput, VisitHistoryQuery } from "../types/visit.types.js";
-import { Prisma, VisitStatus, VisitType } from '@prisma/client';
+import { PriorityLevel, Prisma, VisitStatus, VisitType } from '@prisma/client';
 import { ApiError } from '../utils/ApiError.js'; // Make sure ApiError is imported
 
 interface DateQuery {
@@ -293,4 +293,407 @@ export const getDoctorsOnDate = async (query: DateQuery) => {
     const doctors = visits.map((v) => v.doctor);
 
     return doctors;
+};
+
+export const getAppointmentsByDate = async (date: string) => {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const appointments = await prisma.visit.findMany({
+        where: {
+            visitType: "SCHEDULED",
+            scheduledTime: {
+                gte: startOfDay,
+                lte: endOfDay,
+            },
+            currentStatus: {
+                notIn: ["COMPLETED", "CANCELLED"],
+            },
+        },
+        include: {
+            patient: {
+                select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    gender: true,
+                    dob: true,
+                },
+            },
+            doctor: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        },
+                    },
+                },
+            },
+            logs: {
+                orderBy: {
+                    timestamp: "asc",
+                },
+            },
+        },
+        orderBy: {
+            scheduledTime: "asc",
+        },
+    });
+
+    return appointments;
+};
+
+
+export const bookAppointment = async (data: {
+    patientId: string;
+    doctorId: string;
+    scheduledTime: string;
+    priority?: PriorityLevel;
+    notes?: string;
+}) => {
+    const { patientId, doctorId, scheduledTime, priority = "NORMAL", notes } = data;
+
+    // Validate patient exists
+    const patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+    });
+    if (!patient) {
+        throw new ApiError("Patient not found", 404);
+    }
+
+    // Validate doctor exists and is active
+    const doctor = await prisma.doctor.findUnique({
+        where: { id: doctorId },
+    });
+    if (!doctor) {
+        throw new ApiError("Doctor not found", 404);
+    }
+    if (!doctor.isActive) {
+        throw new ApiError("Doctor is not available", 400);
+    }
+
+    // Check if scheduled time is in the future
+    const appointmentTime = new Date(scheduledTime);
+    if (appointmentTime <= new Date()) {
+        throw new ApiError("Appointment time must be in the future", 400);
+    }
+
+    // Check if slot is already booked
+    const existingAppointment = await prisma.visit.findFirst({
+        where: {
+            doctorId,
+            scheduledTime: appointmentTime,
+            currentStatus: {
+                notIn: ["CANCELLED", "COMPLETED"],
+            },
+        },
+    });
+
+    if (existingAppointment) {
+        throw new ApiError("This time slot is already booked", 409);
+    }
+
+    // Create appointment with transaction
+    const appointment = await prisma.$transaction(async (tx) => {
+        // Create visit
+        const visit = await tx.visit.create({
+            data: {
+                patientId,
+                doctorId,
+                visitType: "SCHEDULED",
+                priority,
+                scheduledTime: appointmentTime,
+                currentStatus: "SCHEDULED",
+            },
+            include: {
+                patient: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        gender: true,
+                        dob: true,
+                    },
+                },
+                doctor: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Create initial log entry
+        await tx.visitLog.create({
+            data: {
+                visitId: visit.id,
+                status: "SCHEDULED",
+                notes: notes || "Appointment booked",
+            },
+        });
+
+        return visit;
+    });
+
+    return appointment;
+};
+
+
+export const rescheduleAppointment = async (visitId: string, newScheduledTime: string) => {
+    // Find existing visit
+    const existingVisit = await prisma.visit.findUnique({
+        where: { id: visitId },
+        include: {
+            doctor: true,
+        },
+    });
+
+    if (!existingVisit) {
+        throw new ApiError("Appointment not found", 404);
+    }
+
+    // Only scheduled appointments can be rescheduled
+    if (existingVisit.visitType !== "SCHEDULED") {
+        throw new ApiError("Only scheduled appointments can be rescheduled", 400);
+    }
+
+    // Cannot reschedule completed or cancelled appointments
+    if (["COMPLETED", "CANCELLED"].includes(existingVisit.currentStatus)) {
+        throw new ApiError("Cannot reschedule a completed or cancelled appointment", 400);
+    }
+
+    // Cannot reschedule if patient is already checked in
+    if (["CHECKED_IN", "WITH_DOCTOR"].includes(existingVisit.currentStatus)) {
+        throw new ApiError("Cannot reschedule - patient is already checked in", 400);
+    }
+
+    // Validate new time is in the future
+    const newTime = new Date(newScheduledTime);
+    if (newTime <= new Date()) {
+        throw new ApiError("New appointment time must be in the future", 400);
+    }
+
+    // Check if new slot is available
+    const conflictingAppointment = await prisma.visit.findFirst({
+        where: {
+            doctorId: existingVisit.doctorId,
+            scheduledTime: newTime,
+            currentStatus: {
+                notIn: ["CANCELLED", "COMPLETED"],
+            },
+            id: {
+                not: visitId, // Exclude current appointment
+            },
+        },
+    });
+
+    if (conflictingAppointment) {
+        throw new ApiError("The new time slot is already booked", 409);
+    }
+
+    // Update appointment with transaction
+    const updatedVisit = await prisma.$transaction(async (tx) => {
+        // Update visit
+        const visit = await tx.visit.update({
+            where: { id: visitId },
+            data: {
+                scheduledTime: newTime,
+            },
+            include: {
+                patient: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        gender: true,
+                        dob: true,
+                    },
+                },
+                doctor: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+                logs: {
+                    orderBy: {
+                        timestamp: "asc",
+                    },
+                },
+            },
+        });
+
+        // Create log entry
+        await tx.visitLog.create({
+            data: {
+                visitId: visit.id,
+                status: "SCHEDULED",
+                notes: `Rescheduled from ${existingVisit.scheduledTime?.toLocaleString()} to ${newTime.toLocaleString()}`,
+            },
+        });
+
+        return visit;
+    });
+
+    return updatedVisit;
+};
+
+export const cancelAppointment = async (visitId: string, reason?: string) => {
+    // Find existing visit
+    const existingVisit = await prisma.visit.findUnique({
+        where: { id: visitId },
+    });
+
+    if (!existingVisit) {
+        throw new ApiError("Appointment not found", 404);
+    }
+
+    // Only scheduled appointments can be cancelled
+    if (existingVisit.visitType !== "SCHEDULED") {
+        throw new ApiError("Only scheduled appointments can be cancelled", 400);
+    }
+
+    // Cannot cancel already completed or cancelled appointments
+    if (["COMPLETED", "CANCELLED"].includes(existingVisit.currentStatus)) {
+        throw new ApiError("Appointment is already completed or cancelled", 400);
+    }
+
+    // Update appointment with transaction
+    const cancelledVisit = await prisma.$transaction(async (tx) => {
+        // Update visit status
+        const visit = await tx.visit.update({
+            where: { id: visitId },
+            data: {
+                currentStatus: "CANCELLED",
+            },
+            include: {
+                patient: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        gender: true,
+                        dob: true,
+                    },
+                },
+                doctor: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+                logs: {
+                    orderBy: {
+                        timestamp: "asc",
+                    },
+                },
+            },
+        });
+
+        // Create log entry
+        await tx.visitLog.create({
+            data: {
+                visitId: visit.id,
+                status: "CANCELLED",
+                notes: reason || "Appointment cancelled",
+            },
+        });
+
+        return visit;
+    });
+
+    return cancelledVisit;
+};
+
+export const checkInAppointment = async (visitId: string) => {
+    // Find existing visit
+    const existingVisit = await prisma.visit.findUnique({
+        where: { id: visitId },
+    });
+
+    if (!existingVisit) {
+        throw new ApiError("Appointment not found", 404);
+    }
+
+    // Only scheduled appointments can be checked in
+    if (existingVisit.visitType !== "SCHEDULED") {
+        throw new ApiError("Only scheduled appointments can be checked in", 400);
+    }
+
+    // Must be in SCHEDULED status
+    if (existingVisit.currentStatus !== "SCHEDULED") {
+        throw new ApiError(`Cannot check in - appointment status is ${existingVisit.currentStatus}`, 400);
+    }
+
+    // Check-in with transaction
+    const checkedInVisit = await prisma.$transaction(async (tx) => {
+        // Update visit status
+        const visit = await tx.visit.update({
+            where: { id: visitId },
+            data: {
+                currentStatus: "CHECKED_IN",
+                checkInTime: new Date(),
+            },
+            include: {
+                patient: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        gender: true,
+                        dob: true,
+                    },
+                },
+                doctor: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+                logs: {
+                    orderBy: {
+                        timestamp: "asc",
+                    },
+                },
+            },
+        });
+
+        // Create log entry
+        await tx.visitLog.create({
+            data: {
+                visitId: visit.id,
+                status: "CHECKED_IN",
+                notes: "Patient checked in",
+            },
+        });
+
+        return visit;
+    });
+
+    return checkedInVisit;
 };

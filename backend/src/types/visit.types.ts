@@ -21,3 +21,20 @@ export const visitHistoryQuerySchema = z.object({
 
 
 export type VisitHistoryQuery = z.infer<typeof visitHistoryQuerySchema>;
+
+
+export const bookAppointmentSchema = z.object({
+    patientId: z.string().uuid({ message: "Valid patient ID is required" }),
+    doctorId: z.string().uuid({ message: "Valid doctor ID is required" }),
+    scheduledTime: z.string().datetime({ message: "Valid datetime is required" }),
+    priority: z.nativeEnum(PriorityLevel).optional().default("NORMAL"),
+    notes: z.string().optional(),
+});
+
+export type BookAppointmentInput = z.infer<typeof bookAppointmentSchema>;
+
+export const rescheduleAppointmentSchema = z.object({
+    newScheduledTime: z.string().datetime({ message: "Valid datetime is required" }),
+});
+
+export type RescheduleAppointmentInput = z.infer<typeof rescheduleAppointmentSchema>;
