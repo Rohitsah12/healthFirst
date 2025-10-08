@@ -6,6 +6,7 @@ import { fetchQueueThunk } from "../../store/queueSlice";
 import { QueueColumn } from "../../components/queue/QueueColumn";
 import { openModal } from "@/app/store/uiSlice";
 import { UserPlus } from "lucide-react";
+import LoadingSpinner from "@/app/components/shared/LoadingSpinner";
 
 export default function QueuePage() {
   const dispatch = useAppDispatch();
@@ -41,7 +42,7 @@ export default function QueuePage() {
       </div>
 
       {status === "loading" && !waiting.length && !withDoctor.length ? (
-        <p>Loading queue...</p>
+        <LoadingSpinner  />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <QueueColumn

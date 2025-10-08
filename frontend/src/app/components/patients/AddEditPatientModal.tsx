@@ -204,7 +204,7 @@ const AddEditPatientModal: React.FC<Props> = ({ patient, onClose, onSuccess }) =
 
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-gray-900 placeholder-gray-400 mb-2">
-                Address
+                Address <span className="text-red-500">*</span>
               </label>
               <textarea
                 name="address"
