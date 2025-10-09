@@ -141,24 +141,50 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
     setApiError(null);
 
     try {
-      // Normalize HH:mm format
       const normalizeHHMM = (s: string) => {
         const [h = "00", m = "00"] = s.split(":");
         return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       };
 
-      // Convert local time (IST) to UTC time before sending to backend
-      const schedulesToSubmit = schedules.map(
-        ({ dayOfWeek, startTime, endTime }) => ({
-          dayOfWeek,
-          startTime: localHHMMToUTCHHMM(normalizeHHMM(startTime)),
-          endTime: localHHMMToUTCHHMM(normalizeHHMM(endTime)),
-        })
-      );
+      // Create a new array to hold the final schedules, including split ones.
+      const schedulesToSubmit: {
+        dayOfWeek: DayOfWeek;
+        startTime: string;
+        endTime: string;
+      }[] = [];
+
+      schedules.forEach(({ dayOfWeek, startTime, endTime }) => {
+        // Convert the local start and end times to UTC HH:mm format
+        const startTimeUTC = localHHMMToUTCHHMM(normalizeHHMM(startTime));
+        const endTimeUTC = localHHMMToUTCHHMM(normalizeHHMM(endTime));
+
+        // Check if the shift crosses the UTC midnight boundary
+        // This happens if the converted start time is numerically greater than the end time.
+        if (startTimeUTC > endTimeUTC) {
+          schedulesToSubmit.push({
+            dayOfWeek,
+            startTime: startTimeUTC,
+            endTime: "23:59",
+          });
+
+          schedulesToSubmit.push({
+            dayOfWeek,
+            startTime: "00:00",
+            endTime: endTimeUTC,
+          });
+        } else {
+          schedulesToSubmit.push({
+            dayOfWeek,
+            startTime: startTimeUTC,
+            endTime: endTimeUTC,
+          });
+        }
+      });
 
       await doctorScheduleApi.upsertDoctorSchedule(doctor.id, {
         schedules: schedulesToSubmit,
       });
+
       onSuccess();
     } catch (err: unknown) {
       setApiError(
@@ -200,8 +226,8 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
 
           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Times are displayed in {DEFAULT_TIMEZONE} timezone. 
-              They will be automatically converted to UTC when saved.
+              <strong>Note:</strong> Times are displayed in {DEFAULT_TIMEZONE}{" "}
+              timezone. They will be automatically converted to UTC when saved.
             </p>
           </div>
 
