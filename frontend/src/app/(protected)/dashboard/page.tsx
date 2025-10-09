@@ -10,7 +10,6 @@ import { Calendar, CheckCircle, Clock, Stethoscope, UserPlus, ChevronRight } fro
 import { StatCard } from '@/app/components/StatCard'; // Ensure you have this component
 import LoadingSpinner from '@/app/components/shared/LoadingSpinner';
 
-// Define the type for your API data to ensure TypeScript knows its shape.
 interface DashboardData {
   stats: {
     waiting: number;
@@ -34,7 +33,6 @@ interface DashboardData {
   }[];
 }
 
-// A standard, reusable fetcher function for SWR.
 const fetcher = async (url: string): Promise<DashboardData> => {
     const response = await api.get<DashboardData>(url);
     return response.data;
@@ -44,21 +42,16 @@ export default function DashboardPage() {
     const dispatch = useAppDispatch();
     const router = useRouter();
 
-    // Use the SWR hook with the correct type and API endpoint as the key.
     const { data, error, isLoading } = useSWR<DashboardData>('/dashboard', fetcher, {
         refreshInterval: 30000 // Optional: refresh data every 30 seconds
     });
 
-    // Handle the loading state while data is being fetched.
     if (isLoading) return <LoadingSpinner />;
 
-    // Handle any errors that occur during fetching.
     if (error) return <p className="text-center p-8 text-red-600">Failed to load dashboard data.</p>;
     
-    // Handle the case where data is not available after loading.
     if (!data) return <p className="text-center p-8">No data available.</p>;
 
-    // If data is available, destructure it for easy use.
     const { stats, queue, appointments } = data;
 
     return (
