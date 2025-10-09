@@ -4,6 +4,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { hashPassword } from "../utils/hashingPassword.js";
 import type { CreateDoctorInput, UpdateDoctorInput } from "../types/doctor.types.js";
 import type { PaginationInput } from "../types/pagination.types.js";
+import { format, getDay, addMinutes, isBefore } from "date-fns";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
+
 
 export const createDoctor = async (data: CreateDoctorInput) => {
   const emailLowerCase = data.email.toLowerCase();
@@ -348,134 +351,108 @@ export const getDoctorsByDay = async (dayOfWeek: DayOfWeek) => {
   return doctors;
 };
 
-
+const dayMap: { [key: number]: DayOfWeek } = {
+    0: DayOfWeek.SUNDAY,
+    1: DayOfWeek.MONDAY,
+    2: DayOfWeek.TUESDAY,
+    3: DayOfWeek.WEDNESDAY,
+    4: DayOfWeek.THURSDAY,
+    5: DayOfWeek.FRIDAY,
+    6: DayOfWeek.SATURDAY,
+};
 export const getDoctorAvailability = async (doctorId: string, date: string) => {
-    // Validate doctor exists
-    const doctor = await prisma.doctor.findUnique({
-        where: { id: doctorId },
-    });
-
-    if (!doctor) {
-        throw new ApiError("Doctor not found", 404);
+    // 1. Basic Validations
+    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+    if (!doctor || !doctor.isActive) {
+        throw new ApiError("Doctor not found or is not available", 404);
     }
 
-    if (!doctor.isActive) {
-        throw new ApiError("Doctor is not available", 400);
-    }
-
-    // Get day of week for the target date
+    const timeZone = "Asia/Kolkata"; // Define the clinic's operational timezone
     const targetDate = new Date(date);
-    const dayOfWeek = targetDate
-        .toLocaleDateString("en-US", { weekday: "long" })
-        .toUpperCase() as DayOfWeek;
+    const dayOfWeek = dayMap[getDay(targetDate)]; // Safe way to get day of week
 
-    // Find doctor's schedule for this day
-    const schedule = await prisma.doctorSchedule.findFirst({
-        where: {
-            doctorId,
-            dayOfWeek,
-        },
-    });
-
-    // If no schedule for this day, return empty slots
-    if (!schedule) {
-        return {
-            availableSlots: [],
-            workingHours: null,
-        };
+    if (!dayOfWeek) {
+        throw new ApiError("Invalid date provided", 400);
     }
 
-    // Get existing appointments for this date
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // 2. Find the schedule for the specific day
+    const schedule = await prisma.doctorSchedule.findFirst({
+        where: { doctorId, dayOfWeek },
+    });
 
-    const existingAppointments = await prisma.visit.findMany({
+    if (!schedule) {
+        return { availableSlots: [], workingHours: null };
+    }
+    const workingHoursStart = fromZonedTime(
+        new Date(
+            targetDate.getFullYear(),
+            targetDate.getMonth(),
+            targetDate.getDate(),
+            schedule.startTime.getUTCHours(),
+            schedule.startTime.getUTCMinutes()
+        ),
+        timeZone
+    );
+
+    const workingHoursEnd = fromZonedTime(
+        new Date(
+            targetDate.getFullYear(),
+            targetDate.getMonth(),
+            targetDate.getDate(),
+            schedule.endTime.getUTCHours(),
+            schedule.endTime.getUTCMinutes()
+        ),
+        timeZone
+    );
+
+    // 4. Get existing appointments using a correct UTC date range
+    const existingVisits = await prisma.visit.findMany({
         where: {
-            doctorId,
+            doctorId: doctorId,
             scheduledTime: {
-                gte: startOfDay,
-                lte: endOfDay,
+                gte: workingHoursStart,
+                lt: workingHoursEnd,
             },
             currentStatus: {
                 notIn: ["CANCELLED", "COMPLETED"],
             },
         },
-        select: {
-            scheduledTime: true,
-        },
+        select: { scheduledTime: true },
     });
-
-    // Create set of booked times
-    const bookedTimes = new Set(
-        existingAppointments.map((apt) => apt.scheduledTime!.getTime())
+    
+    const bookedSlots = new Set(
+        existingVisits.map(v => v.scheduledTime!.toISOString())
     );
 
-    // Generate 30-minute time slots
+    // 5. Generate slots and filter
     const availableSlots: string[] = [];
-    const slotDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const slotDuration = 30; // in minutes
+    let currentSlot = workingHoursStart;
 
-    // Parse schedule times - they are stored in UTC
-    const scheduleStart = new Date(schedule.startTime);
-    const scheduleEnd = new Date(schedule.endTime);
-    
-    // Get UTC hours and minutes
-    const utcStartHour = scheduleStart.getUTCHours();
-    const utcStartMinute = scheduleStart.getUTCMinutes();
-    const utcEndHour = scheduleEnd.getUTCHours();
-    const utcEndMinute = scheduleEnd.getUTCMinutes();
+    // Use a timezone-aware "now" for filtering past slots
+    const nowInUTC = new Date();
+    const bufferTime = addMinutes(nowInUTC, 15); // 15 min buffer
 
-    // Convert UTC to IST (UTC + 5:30)
-    let istStartHour = utcStartHour + 5;
-    let istStartMinute = utcStartMinute + 30;
-    let istEndHour = utcEndHour + 5;
-    let istEndMinute = utcEndMinute + 30;
-
-    // Handle minute overflow
-    if (istStartMinute >= 60) {
-        istStartHour += 1;
-        istStartMinute -= 60;
-    }
-    if (istEndMinute >= 60) {
-        istEndHour += 1;
-        istEndMinute -= 60;
-    }
-
-    // Handle hour overflow (past midnight)
-    istStartHour = istStartHour % 24;
-    istEndHour = istEndHour % 24;
-
-    // Create current time slot starting point in IST
-    let currentTime = new Date(targetDate);
-    currentTime.setHours(istStartHour, istStartMinute, 0, 0);
-
-    // Create end time for the day in IST
-    const endTime = new Date(targetDate);
-    endTime.setHours(istEndHour, istEndMinute, 0, 0);
-
-    // Current timestamp for filtering past slots (in IST)
-    const now = new Date();
-    const bufferTime = new Date(now.getTime() + 15 * 60 * 1000); // 15 min buffer
-
-    // Generate slots
-    while (currentTime < endTime) {
-        // Only include slots that are:
-        // 1. Not already booked
-        // 2. In the future (or at least 15 mins from now for buffer)
-        if (!bookedTimes.has(currentTime.getTime()) && currentTime > bufferTime) {
-            availableSlots.push(currentTime.toISOString());
+    while (isBefore(currentSlot, workingHoursEnd)) {
+        if (!bookedSlots.has(currentSlot.toISOString()) && isBefore(bufferTime, currentSlot)) {
+            availableSlots.push(currentSlot.toISOString());
         }
-
-        currentTime = new Date(currentTime.getTime() + slotDuration);
+        currentSlot = addMinutes(currentSlot, slotDuration);
     }
+
+    // 6. Format response correctly
+    const formatTime = (date: Date) => {
+        const hours = String(date.getUTCHours()).padStart(2, '0');
+        const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    };
 
     return {
         availableSlots,
         workingHours: {
-            dayOfWeek,
-            startTime: `${istStartHour.toString().padStart(2, '0')}:${istStartMinute.toString().padStart(2, '0')}`,
-            endTime: `${istEndHour.toString().padStart(2, '0')}:${istEndMinute.toString().padStart(2, '0')}`,
+            dayOfWeek: schedule.dayOfWeek,
+            startTime: formatTime(schedule.startTime), // e.g., "03:30"
+            endTime: formatTime(schedule.endTime),     // e.g., "11:30"
         },
     };
 };
