@@ -14,6 +14,7 @@ import { patientApi } from "../../services/patientApi";
 import type { Patient } from "../../types/patient.types";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import { Doctor } from "@/app/types/doctor.types";
+import { formatISOToLocalTime, DEFAULT_TIMEZONE } from "../../utils/time";
 
 interface BookAppointmentModalProps {
   onClose: () => void;
@@ -54,9 +55,9 @@ const BookAppointmentModal: React.FC<BookAppointmentModalProps> = ({
 
       try {
         const data = await patientApi.getPatients({
-            search: searchQuery,
-            limit: 1000,
-            page: 1
+          search: searchQuery,
+          limit: 1000,
+          page: 1,
         });
         setPatients(data.patients);
       } catch (err) {
@@ -330,17 +331,15 @@ const BookAppointmentModal: React.FC<BookAppointmentModalProps> = ({
                           </p>
                           {doctor.workingHours[0] && (
                             <p className="text-xs text-gray-500 mt-1">
-                              {new Date(doctor.workingHours[0].startTime).toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                                timeZone: "Asia/Kolkata"
-                              })} - {new Date(doctor.workingHours[0].endTime).toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                                timeZone: "Asia/Kolkata"
-                              })}
+                              {formatISOToLocalTime(
+                                doctor.workingHours[0].startTime,
+                                DEFAULT_TIMEZONE
+                              )}{" "}
+                              -{" "}
+                              {formatISOToLocalTime(
+                                doctor.workingHours[0].endTime,
+                                DEFAULT_TIMEZONE
+                              )}
                             </p>
                           )}
                         </div>
@@ -375,7 +374,7 @@ const BookAppointmentModal: React.FC<BookAppointmentModalProps> = ({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   <Clock className="inline mr-2" size={16} />
-                  Available Time Slots
+                  Available Time Slots ({DEFAULT_TIMEZONE})
                 </label>
 
                 {isLoading ? (
@@ -388,22 +387,27 @@ const BookAppointmentModal: React.FC<BookAppointmentModalProps> = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-3">
-                    {availableSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`px-4 py-3 border-2 rounded-lg font-medium transition-all ${
-                          selectedSlot === slot
-                            ? "border-blue-600 bg-blue-600 text-white"
-                            : "border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50"
-                        }`}
-                      >
-                        {new Date(slot).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </button>
-                    ))}
+                    {availableSlots.map((slot) => {
+                      // Convert UTC slot to IST for display
+                      const displayTime = formatISOToLocalTime(
+                        slot,
+                        DEFAULT_TIMEZONE
+                      );
+
+                      return (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedSlot(slot)}
+                          className={`px-4 py-3 border-2 rounded-lg font-medium transition-all ${
+                            selectedSlot === slot
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : "border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50"
+                          }`}
+                        >
+                          {displayTime}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
