@@ -318,12 +318,29 @@ export const deleteDoctor = async (doctorId: string, isPermanent: boolean) => {
 
 
 export const getDoctorsByDay = async (dayOfWeek: DayOfWeek) => {
+  // Get current UTC time
+  const now = new Date();
+  const currentTimeString = now.toISOString().split('T')[1]!.substring(0, 8); // HH:MM:SS format
+  const currentTime = new Date(`1970-01-01T${currentTimeString}Z`);
+
   const doctors = await prisma.doctor.findMany({
     where: {
-      isActive: true, // Only find active doctors
+      isActive: true,
       workingHours: {
         some: {
           dayOfWeek: dayOfWeek,
+          AND: [
+            {
+              startTime: {
+                lte: currentTime, // Working hours should have started
+              },
+            },
+            {
+              endTime: {
+                gte: currentTime, // Working hours should not have ended yet
+              },
+            },
+          ],
         },
       },
     },
@@ -336,7 +353,19 @@ export const getDoctorsByDay = async (dayOfWeek: DayOfWeek) => {
       },
       workingHours: {
         where: {
-          dayOfWeek: dayOfWeek, // Optionally, only return the relevant schedule
+          dayOfWeek: dayOfWeek,
+          AND: [
+            {
+              startTime: {
+                lte: currentTime,
+              },
+            },
+            {
+              endTime: {
+                gte: currentTime,
+              },
+            },
+          ],
         },
       },
     },
