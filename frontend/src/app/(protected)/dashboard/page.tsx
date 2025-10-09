@@ -7,9 +7,9 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import api from '../../lib/axiosClient';
 import { Calendar, CheckCircle, Clock, Stethoscope, UserPlus, ChevronRight } from 'lucide-react';
-import { StatCard } from '@/app/components/StatCard'; 
+import { StatCard } from '@/app/components/StatCard';
 import LoadingSpinner from '@/app/components/shared/LoadingSpinner';
-import { formatISOToLocalTime } from '@/app/utils/time'; 
+import { formatTimeToLocal } from '../../utils/time';
 
 interface DashboardData {
   stats: {
@@ -22,21 +22,21 @@ interface DashboardData {
     id: string;
     patientName: string;
     doctorName: string;
-    checkInTime: string; 
+    checkInTime: string;
     priority: 'NORMAL' | 'URGENT';
   }[];
   appointments: {
     id: string;
     patientName: string;
     doctorName: string;
-    time: string; 
+    time: string;
     type: string;
   }[];
 }
 
 const fetcher = async (url: string): Promise<DashboardData> => {
-    const response = await api.get<{ data: DashboardData }>(url);
-    return response.data.data;
+    const response = await api.get<DashboardData>(url);
+    return response.data;
 };
 
 export default function DashboardPage() {
@@ -44,11 +44,13 @@ export default function DashboardPage() {
     const router = useRouter();
 
     const { data, error, isLoading } = useSWR<DashboardData>('/dashboard', fetcher, {
-        refreshInterval: 30000 // Optional: refresh data every 30 seconds
+        refreshInterval: 30000
     });
 
     if (isLoading) return <LoadingSpinner />;
+
     if (error) return <p className="text-center p-8 text-red-600">Failed to load dashboard data.</p>;
+    
     if (!data) return <p className="text-center p-8">No data available.</p>;
 
     const { stats, queue, appointments } = data;
@@ -108,7 +110,9 @@ export default function DashboardPage() {
                                         </div>
                                         <p className="text-sm text-gray-600 mt-1">{patient.doctorName}</p>
                                     </div>
-                                    <span className="text-sm text-gray-500 font-medium">{formatISOToLocalTime(patient.checkInTime)}</span>
+                                    <span className="text-sm text-gray-500">
+                                        {formatTimeToLocal(patient.checkInTime)}
+                                    </span>
                                 </div>
                             </div>
                         )) : <p className="text-gray-500 text-center py-4">The queue is empty.</p>}
@@ -131,7 +135,9 @@ export default function DashboardPage() {
                                         <h4 className="font-semibold text-gray-800">{apt.patientName}</h4>
                                         <p className="text-sm text-gray-600 mt-1">{apt.doctorName} • {apt.type}</p>
                                     </div>
-                                    <span className="text-sm font-medium text-blue-600">{formatISOToLocalTime(apt.time)}</span>
+                                    <span className="text-sm font-medium text-blue-600">
+                                        {formatTimeToLocal(apt.time)}
+                                    </span>
                                 </div>
                             </div>
                         )) : <p className="text-gray-500 text-center py-4">No appointments scheduled for today.</p>}
