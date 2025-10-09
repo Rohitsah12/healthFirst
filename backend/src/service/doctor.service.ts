@@ -446,12 +446,27 @@ export const getDoctorsAvailableOnDate = async (date: string) => {
         .toLocaleDateString("en-US", { weekday: "long" })
         .toUpperCase() as DayOfWeek;
 
+    // Extract time component in UTC
+    const targetTime = targetDate.toISOString().split('T')[1]!.substring(0, 8); // HH:MM:SS format
+
     const doctors = await prisma.doctor.findMany({
         where: {
             isActive: true,
             workingHours: {
                 some: {
                     dayOfWeek,
+                    AND: [
+                        {
+                            startTime: {
+                                lte: new Date(`1970-01-01T${targetTime}Z`)
+                            }
+                        },
+                        {
+                            endTime: {
+                                gte: new Date(`1970-01-01T${targetTime}Z`)
+                            }
+                        }
+                    ]
                 },
             },
         },
@@ -467,6 +482,18 @@ export const getDoctorsAvailableOnDate = async (date: string) => {
             workingHours: {
                 where: {
                     dayOfWeek,
+                    AND: [
+                        {
+                            startTime: {
+                                lte: new Date(`1970-01-01T${targetTime}Z`)
+                            }
+                        },
+                        {
+                            endTime: {
+                                gte: new Date(`1970-01-01T${targetTime}Z`)
+                            }
+                        }
+                    ]
                 },
             },
         },
