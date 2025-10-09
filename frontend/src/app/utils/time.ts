@@ -1,71 +1,113 @@
-// src/utils/time.ts
-const pad = (n: number) => String(n).padStart(2, '0');
 
-export const DEFAULT_TIMEZONE = 'Asia/Kolkata'; // change to 'Asia/Kathmandu' if you prefer NPT
-export const DEFAULT_TZ_OFFSET_MINUTES = 330; // IST = +5:30 = 330 minutes; For NPT use 345
+export const DEFAULT_TIMEZONE = 'Asia/Kolkata';
+export const DEFAULT_TZ_OFFSET_MINUTES = 330; // IST is UTC+5:30
 
-/**
- * Format an ISO timestamp (e.g. "1970-01-01T03:30:00.000Z") into a human-friendly 12-hour string
- * in the given timezone (default Asia/Kolkata).
- */
-export const formatISOToLocalTime = (iso: string | undefined | null, tz = DEFAULT_TIMEZONE) => {
-  if (!iso) return '-';
-  try {
-    return new Date(iso).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: tz,
-    });
-  } catch {
-    return '-';
-  }
-};
 
-/**
- * Convert ISO timestamp (or partial time string) to "HH:mm" in given timezone (24-hour) suitable for <input type="time" />.
- * If `iso` looks like an ISO date (contains 'T'), we parse it as Date; otherwise if it's already "HH:mm:ss" or "HH:mm" we normalize.
- */
-export const isoOrTimeStringToHHMM = (isoOrTime: string, tz = DEFAULT_TIMEZONE) => {
+export const isoOrTimeStringToHHMM = (
+  isoOrTime: string,
+  timezone: string = DEFAULT_TIMEZONE
+): string => {
   if (!isoOrTime) return '00:00';
-  // if looks like ISO
-  if (isoOrTime.includes('T') || isoOrTime.endsWith('Z')) {
+
+  if (/^\d{2}:\d{2}$/.test(isoOrTime)) {
+    return isoOrTime;
+  }
+
+  if (isoOrTime.includes('T')) {
     try {
-      const parts = new Date(isoOrTime).toLocaleTimeString('en-GB', {
+      const date = new Date(isoOrTime);
+      const localTime = date.toLocaleTimeString('en-US', {
+        timeZone: timezone,
+        hour12: false,
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false,
-        timeZone: tz,
       });
-      return parts; // "09:00"
-    } catch {
+      return localTime;
+    } catch (error) {
+      console.error('Error parsing ISO time:', error);
       return '00:00';
     }
   }
 
-  // otherwise assume something like "HH:mm:ss" or "HH:mm"
-  const [h, m] = isoOrTime.split(':');
-  if (h === undefined || m === undefined) return '00:00';
-  return `${pad(Number(h))}:${pad(Number(m))}`;
+  return isoOrTime;
 };
 
-/**
- * Convert a local "HH:mm" string in the given timezone to a UTC ISO "1970-01-01T..Z".
- * Many backends store times as 1970-01-01Txx:xx:00.000Z.
- *
- * tzOffsetMinutes: minutes offset from UTC (e.g., IST = +330). Default uses DEFAULT_TZ_OFFSET_MINUTES.
- */
-export const localHHMMToUTCISO = (hhmm: string, tzOffsetMinutes = DEFAULT_TZ_OFFSET_MINUTES) => {
-  const [hStr, mStr] = hhmm.split(':');
-  const h = Number(hStr || '0');
-  const m = Number(mStr || '0');
 
-  const localMinutes = h * 60 + m;
-  let utcMinutes = localMinutes - tzOffsetMinutes; // convert local to UTC minutes
-  utcMinutes = ((utcMinutes % 1440) + 1440) % 1440; // normalize 0..1439
+export const localHHMMToUTCISO = (
+  localTime: string,
+  timezone: string = DEFAULT_TIMEZONE
+): string => {
+  if (!localTime || !/^\d{2}:\d{2}$/.test(localTime)) {
+    throw new Error('Invalid time format. Expected HH:mm');
+  }
 
-  const utcH = Math.floor(utcMinutes / 60);
-  const utcM = utcMinutes % 60;
+  const [hours, minutes] = localTime.split(':').map(Number);
+  
+  const now = new Date();
+  const localDate = new Date(
+    now.toLocaleString('en-US', { timeZone: timezone })
+  );
+  
+  localDate.setHours(hours, minutes, 0, 0);
+ 
+  const utcDate = new Date(localDate.getTime() - (DEFAULT_TZ_OFFSET_MINUTES * 60 * 1000));
+  
+  return utcDate.toISOString();
+};
 
-  return `1970-01-01T${pad(utcH)}:${pad(utcM)}:00.000Z`;
+
+export const localHHMMToUTCHHMM = (localTime: string): string => {
+  if (!localTime || !/^\d{2}:\d{2}$/.test(localTime)) {
+    return '00:00';
+  }
+
+  const [hours, minutes] = localTime.split(':').map(Number);
+  const localMinutes = hours * 60 + minutes;
+  
+  // Subtract IST offset (330 minutes) to get UTC time
+  const utcMinutes = ((localMinutes - DEFAULT_TZ_OFFSET_MINUTES) % 1440 + 1440) % 1440;
+  
+  const utcHours = Math.floor(utcMinutes / 60);
+  const utcMins = utcMinutes % 60;
+  
+  return `${String(utcHours).padStart(2, '0')}:${String(utcMins).padStart(2, '0')}`;
+};
+
+
+export const utcHHMMToLocalHHMM = (utcTime: string): string => {
+  if (!utcTime || !/^\d{2}:\d{2}$/.test(utcTime)) {
+    return '00:00';
+  }
+
+  const [hours, minutes] = utcTime.split(':').map(Number);
+  const utcMinutes = hours * 60 + minutes;
+  
+  // Add IST offset (330 minutes) to get local time
+  const localMinutes = (utcMinutes + DEFAULT_TZ_OFFSET_MINUTES) % 1440;
+  
+  const localHours = Math.floor(localMinutes / 60);
+  const localMins = localMinutes % 60;
+  
+  return `${String(localHours).padStart(2, '0')}:${String(localMins).padStart(2, '0')}`;
+};
+
+
+export const formatISOToLocalTime = (
+  isoString: string,
+  timezone: string = DEFAULT_TIMEZONE
+): string => {
+  if (!isoString) return '';
+
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return '';
+  }
 };

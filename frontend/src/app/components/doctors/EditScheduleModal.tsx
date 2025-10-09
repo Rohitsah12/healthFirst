@@ -1,4 +1,3 @@
-// src/components/EditScheduleModal.tsx
 import React, { useState } from "react";
 import { X, Save, Loader2, Plus, Trash2 } from "lucide-react";
 import { doctorScheduleApi } from "../../services/doctorScheduleApi";
@@ -9,7 +8,7 @@ import type {
 } from "../../types/doctorSchedule.types";
 import {
   isoOrTimeStringToHHMM,
-  localHHMMToUTCISO,
+  localHHMMToUTCHHMM,
   DEFAULT_TIMEZONE,
 } from "../../utils/time";
 
@@ -142,17 +141,18 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
     setApiError(null);
 
     try {
-      // Convert local HH:mm -> UTC ISO expected by backend
+      // Normalize HH:mm format
       const normalizeHHMM = (s: string) => {
         const [h = "00", m = "00"] = s.split(":");
         return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       };
 
+      // Convert local time (IST) to UTC time before sending to backend
       const schedulesToSubmit = schedules.map(
         ({ dayOfWeek, startTime, endTime }) => ({
           dayOfWeek,
-          startTime: normalizeHHMM(startTime),
-          endTime: normalizeHHMM(endTime),
+          startTime: localHHMMToUTCHHMM(normalizeHHMM(startTime)),
+          endTime: localHHMMToUTCHHMM(normalizeHHMM(endTime)),
         })
       );
 
@@ -197,6 +197,13 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
               {apiError}
             </div>
           )}
+
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> Times are displayed in {DEFAULT_TIMEZONE} timezone. 
+              They will be automatically converted to UTC when saved.
+            </p>
+          </div>
 
           <div className="space-y-6">
             {allDays.map((day) => {
