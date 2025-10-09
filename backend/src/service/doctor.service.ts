@@ -360,32 +360,27 @@ const dayMap: { [key: number]: DayOfWeek } = {
     6: DayOfWeek.SATURDAY,
 };
 export const getDoctorAvailability = async (doctorId: string, date: string) => {
-    // 1. Validate doctor exists and is active
+    // 1. Basic Validations
     const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
-    if (!doctor) {
-        throw new ApiError("Doctor not found", 404);
-    }
-    if (!doctor.isActive) {
-        throw new ApiError("Doctor is not currently active", 400);
+    if (!doctor || !doctor.isActive) {
+        throw new ApiError("Doctor not found or is not available", 404);
     }
 
-    // 2. Determine the day of the week from the requested date
     const targetDate = new Date(date); // Creates a date at 00:00:00 UTC
-    const dayOfWeek = dayMap[getDay(targetDate)]!;
+    
+    // 2. Use getUTCDay() to correctly get the day from a UTC date
+    const dayOfWeek = dayMap[targetDate.getUTCDay()]!; // <-- THE FIX IS HERE
 
     // 3. Find the doctor's schedule for that day
-    
     const schedule = await prisma.doctorSchedule.findFirst({
         where: { doctorId, dayOfWeek },
     });
 
-    // If the doctor doesn't work on this day, return empty results
     if (!schedule) {
         return { availableSlots: [], workingHours: null };
     }
 
     // 4. Construct the start and end of working hours in UTC
-    // Since DB time is already UTC, we combine the target date with the schedule's time.
     const workingHoursStart = new Date(targetDate);
     workingHoursStart.setUTCHours(
         schedule.startTime.getUTCHours(),
@@ -400,42 +395,36 @@ export const getDoctorAvailability = async (doctorId: string, date: string) => {
         0, 0
     );
 
-    // 5. Find all existing appointments for the doctor on that day to block those slots
+    // 5. Find all existing appointments to block those slots
     const existingVisits = await prisma.visit.findMany({
         where: {
             doctorId: doctorId,
-            scheduledTime: {
-                gte: workingHoursStart,
-                lt: workingHoursEnd,
-            },
+            scheduledTime: { gte: workingHoursStart, lt: workingHoursEnd },
             currentStatus: { notIn: ["CANCELLED", "COMPLETED"] },
         },
         select: { scheduledTime: true },
     });
 
-    // Use a Set for efficient lookup of booked slots
     const bookedSlots = new Set(
         existingVisits.map(v => v.scheduledTime!.toISOString())
     );
 
     // 6. Generate time slots and filter out any that are booked or in the past
     const availableSlots: string[] = [];
-    const slotDuration = 30; // 30 minutes
+    const slotDuration = 30;
     let currentSlot = workingHoursStart;
 
-    // Set a buffer to prevent booking appointments too close to the current time
     const nowInUTC = new Date();
-    const bufferTime = addMinutes(nowInUTC, 15); // 15-minute buffer
+    const bufferTime = addMinutes(nowInUTC, 15);
 
     while (isBefore(currentSlot, workingHoursEnd)) {
-        // A slot is available if it's not in the booked list AND it's after the buffer time
         if (!bookedSlots.has(currentSlot.toISOString()) && isBefore(bufferTime, currentSlot)) {
             availableSlots.push(currentSlot.toISOString());
         }
         currentSlot = addMinutes(currentSlot, slotDuration);
     }
 
-    // 7. Format the working hours for a user-friendly response
+    // 7. Format the working hours for the response
     const formatTime = (date: Date) => {
         const hours = String(date.getUTCHours()).padStart(2, '0');
         const minutes = String(date.getUTCMinutes()).padStart(2, '0');
