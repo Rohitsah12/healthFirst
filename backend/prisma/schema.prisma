@@ -69,6 +69,7 @@ model Doctor {
   userId         String @unique // Foreign key to the User model
   user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   specialisation String
+  location      String @default("") 
   gender         Gender
   isActive       Boolean @default(true)
   createdAt      DateTime @default(now())

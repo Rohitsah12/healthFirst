@@ -17,7 +17,8 @@ const AddEditDoctorModal: React.FC<AddEditDoctorModalProps> = ({ doctor, onClose
     email: doctor?.user.email || '',
     phone: doctor?.user.phone || '',
     specialisation: doctor?.specialisation || '',
-    gender: doctor?.gender || 'MALE'
+    gender: doctor?.gender || 'MALE',
+    location: doctor?.location || ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +43,9 @@ const AddEditDoctorModal: React.FC<AddEditDoctorModalProps> = ({ doctor, onClose
 
     if (!formData.specialisation.trim()) {
       newErrors.specialisation = 'Specialization is required';
+    }
+    if(!formData.location.trim()){
+      newErrors.location = 'Location is required';
     }
 
     setErrors(newErrors);
@@ -78,7 +82,8 @@ const AddEditDoctorModal: React.FC<AddEditDoctorModalProps> = ({ doctor, onClose
           email: formData.email,
           phone: formData.phone,
           specialisation: formData.specialisation,
-          gender: formData.gender
+          gender: formData.gender,
+          location: formData.location
         });
       } else {
         await doctorApi.createDoctor(formData);
@@ -223,6 +228,20 @@ const AddEditDoctorModal: React.FC<AddEditDoctorModalProps> = ({ doctor, onClose
                 <option value="FEMALE">Female</option>
                 <option value="OTHER">Other</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Location
+              </label>
+              <input 
+                type="text"
+                name="location" 
+                value={formData.location}
+                onChange={handleChange}
+                placeholder="e.g., Delhi, India"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all text-gray-700"
+                disabled={isSubmitting}
+              />
             </div>
           </div>
 

@@ -11,6 +11,7 @@ export const createDoctorSchema = z.object({
   email: emailSchema,
   phone: phoneSchema,
   specialisation: specializationSchema,
+  location: z.string().min(2, "Location must be at least 2 characters long").max(100, "Location must be at most 100 characters long"),
   gender: z.nativeEnum(Gender)
 });
 
@@ -21,6 +22,7 @@ export const updateDoctorSchema = z.object({
   email: emailSchema.optional(),
   phone: phoneSchema.optional(),
   specialization: specializationSchema.optional(),
+  location: z.string().min(2, "Location must be at least 2 characters long").max(100, "Location must be at most 100 characters long").optional(),
   gender: z.nativeEnum(Gender).optional()
 });
 

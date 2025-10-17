@@ -48,6 +48,7 @@ const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onViewSchedule, onEdit,
       
       <h3 className="text-xl font-bold text-gray-800 mb-2">{doctor.user.name}</h3>
       <p className="text-gray-600 mb-1">{doctor.specialisation}</p>
+      <p className="text-gray-600 mb-4">{doctor.location}</p>
       
       <div className="flex items-center gap-2 mb-4">
         <span className={`text-xs px-2 py-1 rounded-full font-medium ${getGenderBadge(doctor.gender)}`}>

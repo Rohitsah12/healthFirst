@@ -38,6 +38,7 @@ export const createDoctor = async (data: CreateDoctorInput) => {
         userId: newUser.id,
         specialisation: data.specialisation,
         gender: data.gender,
+        location: data.location,
       },
       include: {
         user: true,
@@ -70,6 +71,7 @@ export const getDoctors = async (params: PaginationInput) => {
       { user: { email: { contains: search, mode: "insensitive" } } },
       { user: { phone: { contains: search } } },
       { specialisation: { contains: search, mode: "insensitive" } },
+      { location: { contains: search, mode: "insensitive" } },
     ];
   }
 
@@ -176,6 +178,7 @@ export const updateDoctor = async (doctorId: string, updateData: UpdateDoctorInp
 
     const userUpdateData: any = {};
     if (updateData.name) userUpdateData.name = updateData.name;
+    
     if (updateData.email) {
       userUpdateData.email = updateData.email.toLowerCase();
 
@@ -219,7 +222,9 @@ export const updateDoctor = async (doctorId: string, updateData: UpdateDoctorInp
     if (updateData.gender) {
       doctorUpdateData.gender = updateData.gender;
     }
-
+    if (updateData.location) {
+      doctorUpdateData.location = updateData.location;
+    }
     if (Object.keys(doctorUpdateData).length > 0) {
       await tx.doctor.update({
         where: { id: doctorId },

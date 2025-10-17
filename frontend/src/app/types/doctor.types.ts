@@ -13,6 +13,7 @@ export interface Doctor {
   id: string;
   userId: string;
   specialisation: string;
+  location: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   isActive: boolean;
   createdAt: string;
@@ -42,5 +43,6 @@ export interface CreateDoctorInput {
   email: string;
   phone: string;
   specialisation: string;
+  location: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
 }
