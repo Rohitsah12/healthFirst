@@ -72,8 +72,9 @@ export const getAvailableDoctorsByDay = asyncHandler(async (req: Request, res: R
 
   const doctors = await doctorService.getDoctorsByDay(dayOfWeek);
 
+  // UPDATED: Return doctors in the expected format
   return res.status(200).json(
-    new ApiResponse("Available doctors fetched successfully", doctors, true)
+    new ApiResponse("Available doctors fetched successfully", { doctors }, true)
   );
 });
 

@@ -24,6 +24,13 @@ export interface DoctorAvailability {
     } | null;
 }
 
+// Helper function to convert date to day of week
+const getDayOfWeekFromDate = (dateString: string): string => {
+    const daysOfWeek = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const date = new Date(dateString);
+    return daysOfWeek[date.getDay()];
+};
+
 export const appointmentApi = {
     getAppointmentsByDate: async (date: string): Promise<Visit[]> => {
         const { data } = await apiClient.get<ApiResponse<{ appointments: Visit[] }>>(
@@ -77,8 +84,11 @@ export const appointmentApi = {
     },
 
     getDoctorsAvailableOnDate: async (date: string): Promise<Doctor[]> => {
+        // Convert date to day of week
+        const dayOfWeek = getDayOfWeekFromDate(date);
+        
         const { data } = await apiClient.get<ApiResponse<{ doctors: Doctor[] }>>(
-            `/doctor/available-on-date?date=${date}`
+            `/doctor/available-by-day?day=${dayOfWeek}`
         );
         return data.data.doctors;
     },
